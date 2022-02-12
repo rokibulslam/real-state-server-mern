@@ -25,11 +25,26 @@ async function run() {
     const apartmentCollection = database.collection("apartments");
 
     // GET METHOD
-
-      
+        // GET ALL APARTMENTS
+      app.get('/apartments', async (req, res) => {
+          const cursor = apartmentCollection.find({});
+          const total = await cursor.toArray()
+          res.send(total)
+      })
+        // GET AN APARTMENT BY ID
+      app.get('/apartment/:id', async (req, res) => {
+          const id = req.body.params;
+          const query = { _id: ObjectId(id) }
+          const result = await apartmentCollection.find(query);
+          res.send(result)
+      })
     // POST METHOD
-      
-      
+        //   ADD AN APARTMENT APARTMENT COLLECTION
+      app.post('/apartments', async (res, req) => {
+          const apartment = req.body;
+          const result = await apartmentCollection.insertOne(apartment);
+          res.json(result)
+      })
     // UPDATE METHOD
       
       
