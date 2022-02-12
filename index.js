@@ -19,14 +19,26 @@ const client = new MongoClient(uri, {
 });
 
 async function run() {
-    try {
-        
-        
-    } finally {
-        // await client.close()
-    }
-}
+  try {
+    await client.connect();
+    const database = client.db("realState");
+    const apartmentCollection = database.collection("apartments");
 
+    // GET METHOD
+
+      
+    // POST METHOD
+      
+      
+    // UPDATE METHOD
+      
+      
+    // DELETE METHOD
+      
+  } finally {
+    // await client.close()
+  }
+}
 
 run().catch(console.dir);
 
