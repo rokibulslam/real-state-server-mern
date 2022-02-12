@@ -23,33 +23,117 @@ async function run() {
     await client.connect();
     const database = client.db("realState");
     const apartmentCollection = database.collection("apartments");
+    const orderCollection = database.collection("orders");
+    const userCollection = database.collection("users");
+    const reviewCollection = database.collection("reviews");
 
     // GET METHOD
-        // GET ALL APARTMENTS
-      app.get('/apartments', async (req, res) => {
-          const cursor = apartmentCollection.find({});
-          const total = await cursor.toArray()
-          res.send(total)
-      })
-        // GET AN APARTMENT BY ID
-      app.get('/apartment/:id', async (req, res) => {
-          const id = req.body.params;
-          const query = { _id: ObjectId(id) }
-          const result = await apartmentCollection.find(query);
-          res.send(result)
-      })
+    // GET ALL APARTMENTS
+    app.get("/apartments", async (req, res) => {
+      const cursor = apartmentCollection.find({});
+      const total = await cursor.toArray();
+      res.send(total);
+    });
+    // GET AN APARTMENT BY ID
+    app.get("/apartment/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await apartmentCollection.find(query);
+      res.send(result);
+    });
+    // GET ALL ORDERS
+    app.get("/orders", async (req, res) => {
+      const cursor = orderCollection.find({});
+      const orders = await cursor.toArray();
+      res.json(orders);
+    });
+    // GET SPECIFIC USERS ORDER BY EMAIL
+    app.get("/orders/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        email: email
+      };
+      const result = await orderCollection.find(query).toArray();
+      res.json(result);
+    });
+    // CHECKING USER & ADMIN ROLE
+    app.get("/users/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email: email };
+      const user = await userCollection.findOne(query);
+      let isAdmin = false;
+      if (user?.role === "admin") {
+        isAdmin = true;
+      }
+      res.json({ admin: isAdmin });
+    });
+    // GET ALL REVIEWS
+    app.get("/reviews", async (req, res) => {
+      const cursor = reviewCollection.find({});
+      const reviews = await cursor.toArray();
+      res.send(reviews);
+    });
     // POST METHOD
-        //   ADD AN APARTMENT APARTMENT COLLECTION
-      app.post('/apartments', async (res, req) => {
-          const apartment = req.body;
-          const result = await apartmentCollection.insertOne(apartment);
-          res.json(result)
-      })
+    //   ADD AN APARTMENT APARTMENT COLLECTION
+    app.post("/apartments", async (res, req) => {
+      const apartment = req.body;
+      const result = await apartmentCollection.insertOne(apartment);
+      res.json(result);
+    });
+
+    //ADD AN USER
+    app.post("/users", async (req, res) => {
+      const user = req.body;
+      const result = await userCollection.insertOne(user);
+      res.json(result);
+    });
+    // CHECK AND ADD GOOGLE USER
+    app.put("/users", async (req, res) => {
+      const user = req.body;
+      const checkUser = { email: user.email };
+      //   if not found then add user using (upsert)
+      const updateUser = { $set: user };
+      const option = { upsert: true };
+      const result = await userCollection.updateOne(
+        checkUser,
+        updateUser,
+        option
+      );
+      res.json(result);
+    });
+    // ADD REVIEW
+    app.post("/review", async (req, res) => {
+      const review = req.body;
+      const result = await reviewCollection.insertOne(review);
+      res.json(result);
+    });
     // UPDATE METHOD
-      
-      
+    // UPDATE ORDER'S STATUS BY ID
+    app.put("/order/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateInfo = req.body;
+      const result = await orderCollection.updateOne(
+        { _id: ObjectId(id) },
+        { $set: { status: updateInfo.status } }
+      );
+      res.send(result);
+    });
+    // CHANGE USER ROLE AND MAKE ADMIN
+    app.put("/users/admin", async (req, res) => {
+      const user = req.body;
+      const filter = { email: user.email };
+      const updateUserRole = { $set: { role: "admin" } };
+      const result = await userCollection.updateOne(filter, updateUserRole);
+      res.json(result);
+    });
     // DELETE METHOD
-      
+    //   DELETE AN APARTMENT FROM COLLECTION
+    app.delete("/apartment/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await apartmentCollection.deleteOne(query);
+      res.json(result);
+    });
   } finally {
     // await client.close()
   }
