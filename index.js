@@ -38,15 +38,11 @@ async function run() {
     app.get("/apartment/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
-      const result = await apartmentCollection.find(query);
+      const result = await apartmentCollection.findOne(query);
+      console.log(result);
       res.send(result);
     });
-    // GET ALL ORDERS
-    app.get("/orders", async (req, res) => {
-      const cursor = orderCollection.find({});
-      const orders = await cursor.toArray();
-      res.json(orders);
-    });
+
     // GET FEATURED APARTMENTS
     app.get("/apartments/featured", async (req, res) => {
       const query = {
@@ -70,6 +66,12 @@ async function run() {
       };
       const result = await apartmentCollection.find(query).toArray();
       res.json(result);
+    });
+    // GET ALL ORDERS
+    app.get("/orders", async (req, res) => {
+      const cursor = orderCollection.find({});
+      const orders = await cursor.toArray();
+      res.json(orders);
     });
     // GET SPECIFIC USERS ORDER BY EMAIL
     app.get("/orders/:email", async (req, res) => {
@@ -105,7 +107,11 @@ async function run() {
       const result = await apartmentCollection.insertOne(apartment);
       res.json(result);
     });
-
+    app.post("/orders", async (req, res) => {
+      const apartment = req.body;
+      const result = await orderCollection.insertOne(apartment);
+      res.json(result);
+    });
     //ADD AN USER
     app.post("/users", async (req, res) => {
       const user = req.body;
