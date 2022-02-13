@@ -165,6 +165,15 @@ async function run() {
       const result = await apartmentCollection.deleteOne(query);
       res.json(result);
     });
+    // DELETE AN ORDER 
+    app.delete("/order/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id)
+      const query = { _id: ObjectId(id) };
+      const result = await orderCollection.deleteOne(query);
+      console.log(result)
+      res.json(result);
+    });
   } finally {
     // await client.close()
   }
