@@ -47,11 +47,35 @@ async function run() {
       const orders = await cursor.toArray();
       res.json(orders);
     });
+    // GET FEATURED APARTMENTS
+    app.get("/apartments/featured", async (req, res) => {
+      const query = {
+        Category: "Featured",
+      };
+      const result = await apartmentCollection.find(query).toArray();
+      res.json(result);
+    });
+    // GET RGULAR APARTMENTS
+    app.get("/apartments/regular", async (req, res) => {
+      const query = {
+        Category: "Regular",
+      };
+      const result = await apartmentCollection.find(query).toArray();
+      res.json(result);
+    });
+    // GET RGULAR APARTMENTS
+    app.get("/apartments/top", async (req, res) => {
+      const query = {
+        Category: "Top-Rated",
+      };
+      const result = await apartmentCollection.find(query).toArray();
+      res.json(result);
+    });
     // GET SPECIFIC USERS ORDER BY EMAIL
     app.get("/orders/:email", async (req, res) => {
       const email = req.params.email;
       const query = {
-        email: email
+        email: email,
       };
       const result = await orderCollection.find(query).toArray();
       res.json(result);
@@ -75,8 +99,9 @@ async function run() {
     });
     // POST METHOD
     //   ADD AN APARTMENT APARTMENT COLLECTION
-    app.post("/apartments", async (res, req) => {
+    app.post("/apartments", async (req, res) => {
       const apartment = req.body;
+      console.log(apartment);
       const result = await apartmentCollection.insertOne(apartment);
       res.json(result);
     });
