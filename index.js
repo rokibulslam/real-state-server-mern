@@ -17,10 +17,10 @@ const client = new MongoClient(uri, {
   useNewUrlParser: true,
   useUnifiedTopology: true,
 });
-
+client.connect();
 async function run() {
   try {
-    client.connect();
+    
     const database = client.db("realState");
     const apartmentCollection = database.collection("apartments");
     const orderCollection = database.collection("orders");
