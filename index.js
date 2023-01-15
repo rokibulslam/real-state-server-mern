@@ -4,8 +4,10 @@ const port = process.env.PORT || 5000;
 const cors = require("cors");
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
-
 const ObjectId = require("mongodb").ObjectId;
+const stripe = require("stripe")(process.env.STRIPE);
+
+
 
 // Middleware
 app.use(cors());
@@ -138,6 +140,21 @@ async function run() {
       const result = await reviewCollection.insertOne(review);
       res.json(result);
     });
+    // Create Stripe Payment Intent
+    app.post('/payment-intent', async (req, res) => {
+      const order = req.body;
+      const price = order.price;
+      // Conver Price in cents 
+      const amount = price * 100;
+      const paymentIntent = await stripe.paymentIntents.create({
+        currency: "usd",
+        amount: amount,
+        payment_method_types: ["card"],
+      });
+      console.log(paymentIntent);
+      res.send({clientSecret:paymentIntent})
+    })
+
     // UPDATE METHOD
     // UPDATE ORDER'S STATUS BY ID
     app.put("/order/status/:id", async (req, res) => {
@@ -149,6 +166,7 @@ async function run() {
       );
       res.send(result);
     });
+
     // CHANGE USER ROLE AND MAKE ADMIN
     app.put("/users/admin", async (req, res) => {
       const user = req.body;
