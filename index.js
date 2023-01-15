@@ -109,11 +109,7 @@ async function run() {
       const result = await apartmentCollection.insertOne(apartment);
       res.json(result);
     });
-    app.post("/orders", async (req, res) => {
-      const apartment = req.body;
-      const result = await orderCollection.insertOne(apartment);
-      res.json(result);
-    });
+   
     //ADD AN USER
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -151,10 +147,14 @@ async function run() {
         amount: amount,
         payment_method_types: ["card"],
       });
-      console.log(paymentIntent);
       res.send({clientSecret:paymentIntent})
     })
-
+    app.post("/orders", async (req, res) => {
+      const apartment = req.body;
+      console.log(apartment);
+       const result = await orderCollection.insertOne(apartment);
+       res.json(result);
+     });
     // UPDATE METHOD
     // UPDATE ORDER'S STATUS BY ID
     app.put("/order/status/:id", async (req, res) => {
