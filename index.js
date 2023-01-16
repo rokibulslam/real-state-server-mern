@@ -147,12 +147,14 @@ async function run() {
         amount: amount,
         payment_method_types: ["card"],
       });
-      res.send({clientSecret:paymentIntent})
+      res.send({ clientSecret: paymentIntent.client_secret});
     })
+    
     app.post("/orders", async (req, res) => {
       const apartment = req.body;
       console.log(apartment);
        const result = await orderCollection.insertOne(apartment);
+       console.log(result);
        res.json(result);
      });
     // UPDATE METHOD
