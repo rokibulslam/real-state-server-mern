@@ -1,3 +1,4 @@
+const { v4: uuidv4 } = require("uuid");
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -5,9 +6,7 @@ const cors = require("cors");
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
 const ObjectId = require("mongodb").ObjectId;
-const stripe = require("stripe")(process.env.STRIPE);
-
-
+const Stripe = require("stripe")(process.env.STRIPE);
 
 // Middleware
 app.use(cors());
@@ -22,7 +21,6 @@ const client = new MongoClient(uri, {
 client.connect();
 async function run() {
   try {
-    
     const database = client.db("realState");
     const apartmentCollection = database.collection("apartments");
     const orderCollection = database.collection("orders");
@@ -109,7 +107,7 @@ async function run() {
       const result = await apartmentCollection.insertOne(apartment);
       res.json(result);
     });
-   
+
     //ADD AN USER
     app.post("/users", async (req, res) => {
       const user = req.body;
@@ -136,27 +134,33 @@ async function run() {
       const result = await reviewCollection.insertOne(review);
       res.json(result);
     });
-    // Create Stripe Payment Intent
-    app.post('/payment-intent', async (req, res) => {
-      const order = req.body;
-      const price = order.price;
-      // Conver Price in cents 
-      const amount = price * 100;
-      const paymentIntent = await stripe.paymentIntents.create({
-        currency: "usd",
-        amount: amount,
-        payment_method_types: ["card"],
-      });
-      res.send({ clientSecret: paymentIntent.client_secret});
-    })
-    
+    // Payment Config
+    app.post("/payment", async (req, res) => {
+      let status, error;
+      const { token, amount } = req.body;
+        const paymentInfo = await Stripe.charges.create(
+          {
+            source: token.id,
+            amount,
+            currency: "USD",
+            receipt_email: token.email,
+          },
+          {
+            idempotencyKey: uuidv4(),
+          }
+        );
+        console.log(paymentInfo);
+        status = "success";
+      res.json({ error, status, paymentInfo });
+    });
+
     app.post("/orders", async (req, res) => {
       const apartment = req.body;
       console.log(apartment);
-       const result = await orderCollection.insertOne(apartment);
-       console.log(result);
-       res.json(result);
-     });
+      const result = await orderCollection.insertOne(apartment);
+      console.log(result);
+      res.json(result);
+    });
     // UPDATE METHOD
     // UPDATE ORDER'S STATUS BY ID
     app.put("/order/status/:id", async (req, res) => {
@@ -185,13 +189,13 @@ async function run() {
       const result = await apartmentCollection.deleteOne(query);
       res.json(result);
     });
-    // DELETE AN ORDER 
+    // DELETE AN ORDER
     app.delete("/order/delete/:id", async (req, res) => {
       const id = req.params.id;
-      console.log(id)
+      console.log(id);
       const query = { _id: ObjectId(id) };
       const result = await orderCollection.deleteOne(query);
-      console.log(result)
+      console.log(result);
       res.json(result);
     });
   } finally {
