@@ -73,15 +73,7 @@ async function run() {
       const orders = await cursor.toArray();
       res.json(orders);
     });
-    // GET SPECIFIC USERS ORDER BY EMAIL
-    app.get("/orders/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        email: email,
-      };
-      const result = await orderCollection.find(query).toArray();
-      res.json(result);
-    });
+
     // CHECKING USER & ADMIN ROLE
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
@@ -136,36 +128,44 @@ async function run() {
     });
     // Payment Config
     app.post("/orders", async (req, res) => {
-      
       const orderData = req.body;
-      console.log(orderData)
-        const paymentInfo = await Stripe.charges.create(
-          {
-            source: orderData.token.id,
-            amount: orderData.price * 100,
-            currency: "USD",
-            receipt_email: orderData.token.email,
-          },
-          {
-            idempotencyKey: uuidv4(),
-          }
-        )
-      
-        console.log(paymentInfo);
+      console.log(orderData);
+      const paymentInfo = await Stripe.charges.create(
+        {
+          source: orderData.token.id,
+          amount: orderData.price * 100,
+          currency: "USD",
+          receipt_email: orderData.token.email,
+        },
+        {
+          idempotencyKey: uuidv4(),
+        }
+      );
+
+      console.log(paymentInfo);
       const newOrder = {
         userEmail: orderData.userEmail,
         paymentBy: "Stripe",
-        TransactionId: paymentInfo.balance_transaction,
+        transactionId: paymentInfo.balance_transaction,
         cartItem: orderData.cart,
-        TotalPrice: orderData.price,
-        ShippingAddress: orderData.shippingAdress,
-        Shipping: orderData.cart.shipping,
-      }
+        totalPrice: orderData.price,
+        shippingAddress: orderData.shippingAdress,
+        shipping: orderData.cart.shipping,
+        status: "pending",
+      };
       const result = await orderCollection.insertOne(newOrder);
-      console.log(result)
-      res.json(result)
+      console.log(result);
+      res.json(result);
     });
-
+    // GET SPECIFIC USERS ORDER BY EMAIL
+    app.get("/orders/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        userEmail: email,
+      };
+      const result = await orderCollection.find(query).toArray();
+      res.json(result);
+    });
     // UPDATE METHOD
     // UPDATE ORDER'S STATUS BY ID
     app.put("/order/status/:id", async (req, res) => {
