@@ -135,32 +135,37 @@ async function run() {
       res.json(result);
     });
     // Payment Config
-    app.post("/payment", async (req, res) => {
-      let status, error;
-      const { token, amount } = req.body;
+    app.post("/orders", async (req, res) => {
+      
+      const orderData = req.body;
+      console.log(orderData)
         const paymentInfo = await Stripe.charges.create(
           {
-            source: token.id,
-            amount,
+            source: orderData.token.id,
+            amount: orderData.price * 100,
             currency: "USD",
-            receipt_email: token.email,
+            receipt_email: orderData.token.email,
           },
           {
             idempotencyKey: uuidv4(),
           }
-        );
+        )
+      
         console.log(paymentInfo);
-        status = "success";
-      res.json({ error, status, paymentInfo });
+      const newOrder = {
+        userEmail: orderData.userEmail,
+        paymentBy: "Stripe",
+        TransactionId: paymentInfo.balance_transaction,
+        cartItem: orderData.cart,
+        TotalPrice: orderData.price,
+        ShippingAddress: orderData.shippingAdress,
+        Shipping: orderData.cart.shipping,
+      }
+      const result = await orderCollection.insertOne(newOrder);
+      console.log(result)
+      res.json(result)
     });
 
-    app.post("/orders", async (req, res) => {
-      const apartment = req.body;
-      console.log(apartment);
-      const result = await orderCollection.insertOne(apartment);
-      console.log(result);
-      res.json(result);
-    });
     // UPDATE METHOD
     // UPDATE ORDER'S STATUS BY ID
     app.put("/order/status/:id", async (req, res) => {
