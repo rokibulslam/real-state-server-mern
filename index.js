@@ -129,11 +129,10 @@ async function run() {
     // Payment Config
     app.post("/orders", async (req, res) => {
       const orderData = req.body;
-      console.log(orderData);
       const paymentInfo = await Stripe.charges.create(
         {
           source: orderData.token.id,
-          amount: orderData.price * 100,
+          amount: orderData.grandTotal * 100,
           currency: "USD",
           receipt_email: orderData.token.email,
         },
@@ -141,17 +140,16 @@ async function run() {
           idempotencyKey: uuidv4(),
         }
       );
-
-      console.log(paymentInfo);
       const newOrder = {
         userEmail: orderData.userEmail,
         paymentBy: "Stripe",
         transactionId: paymentInfo.balance_transaction,
         cartItem: orderData.cart,
-        totalPrice: orderData.price,
+        totalPrice: orderData.grandTotal,
         shippingAddress: orderData.shippingAdress,
-        shipping: orderData.cart.shipping,
+        shipping: orderData.shipping,
         status: "pending",
+        date:orderData.date,
       };
       const result = await orderCollection.insertOne(newOrder);
       console.log(result);
