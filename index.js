@@ -85,6 +85,7 @@ async function run() {
       }
       res.json({ admin: isAdmin });
     });
+
     // GET ALL REVIEWS
     app.get("/reviews", async (req, res) => {
       const cursor = reviewCollection.find({});
@@ -99,25 +100,46 @@ async function run() {
       const result = await apartmentCollection.insertOne(apartment);
       res.json(result);
     });
-
+    // GET ALL USER LIST
+    app.get("/users", async (req, res) => {
+      const cursor = await userCollection.find({});
+      const users = await cursor.toArray();
+      res.json(users);
+    });
     //ADD AN USER
     app.post("/users", async (req, res) => {
       const user = req.body;
-      const result = await userCollection.insertOne(user);
+      const newUser = {
+        ...user,
+        role:'user'
+      }
+      const result = await userCollection.insertOne(newUser);
       res.json(result);
     });
     // CHECK AND ADD GOOGLE USER
     app.put("/users", async (req, res) => {
       const user = req.body;
+      const newUser = {
+        ...user,
+        role: "user",
+      };
       const checkUser = { email: user.email };
       //   if not found then add user using (upsert)
-      const updateUser = { $set: user };
+      const updateUser = { $set: newUser };
       const option = { upsert: true };
       const result = await userCollection.updateOne(
         checkUser,
         updateUser,
         option
       );
+      res.json(result);
+    });
+    // CHANGE USER ROLE AND MAKE ADMIN
+    app.put("/users/admin", async (req, res) => {
+      const user = req.body;
+      const filter = { email: user.email };
+      const updateUserRole = { $set: { role: "admin" } };
+      const result = await userCollection.updateOne(filter, updateUserRole);
       res.json(result);
     });
     // ADD REVIEW
@@ -149,7 +171,7 @@ async function run() {
         shippingAddress: orderData.shippingAdress,
         shipping: orderData.shipping,
         status: "pending",
-        date:orderData.date,
+        date: orderData.date,
       };
       const result = await orderCollection.insertOne(newOrder);
       console.log(result);
@@ -176,14 +198,6 @@ async function run() {
       res.send(result);
     });
 
-    // CHANGE USER ROLE AND MAKE ADMIN
-    app.put("/users/admin", async (req, res) => {
-      const user = req.body;
-      const filter = { email: user.email };
-      const updateUserRole = { $set: { role: "admin" } };
-      const result = await userCollection.updateOne(filter, updateUserRole);
-      res.json(result);
-    });
     // DELETE METHOD
     //   DELETE AN APARTMENT FROM COLLECTION
     app.delete("/apartment/delete/:id", async (req, res) => {
