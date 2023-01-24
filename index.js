@@ -142,6 +142,16 @@ async function run() {
       const result = await userCollection.updateOne(filter, updateUserRole);
       res.json(result);
     });
+    app.put("/update/user/:email", async (req, res) => {
+      console.log(req);
+      const email = req.params.email;
+      const role = req.body;
+      const result = await userCollection.updateOne(
+        { email: email },
+        { $set: { role: role.role } }
+      );
+      res.send(result);
+    });
     // ADD REVIEW
     app.post("/review", async (req, res) => {
       const review = req.body;
