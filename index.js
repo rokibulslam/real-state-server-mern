@@ -152,6 +152,15 @@ async function run() {
       );
       res.send(result);
     });
+     app.put("/apartment/update/:id", async (req, res) => {
+       const id = req.params.id;
+       const product= req.body
+       const query = { _id: ObjectId(id) };
+       const update={$set:{...product}}
+       const result = await apartmentCollection.updateOne(query, update);
+       console.log(result);
+       res.send(result);
+     });
     // ADD REVIEW
     app.post("/review", async (req, res) => {
       const review = req.body;
