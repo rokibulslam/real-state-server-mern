@@ -79,10 +79,11 @@ async function run() {
       const email = req.params.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
+      console.log(user);
       let isAdmin = false;
-      if (user?.role === "admin") {
+      if (user && (user.role === "admin" || user.role === "superAdmin")) {
         isAdmin = true;
-      }
+      } 
       res.json({ admin: isAdmin });
     });
 
@@ -121,7 +122,6 @@ async function run() {
       const user = req.body;
       const newUser = {
         ...user,
-        role: "user",
       };
       const checkUser = { email: user.email };
       //   if not found then add user using (upsert)
