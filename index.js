@@ -27,19 +27,41 @@ async function run() {
     const userCollection = database.collection("users");
     const reviewCollection = database.collection("reviews");
 
-    // GET METHOD
-    // GET ALL APARTMENTS
+    /*---------------
+        APARTMENTS
+    ---------------*/
     app.get("/apartments", async (req, res) => {
       const cursor = apartmentCollection.find({});
       const total = await cursor.toArray();
       res.send(total);
     });
+    // Create Apartments
+    app.post("/apartments", async (req, res) => {
+      const apartment = req.body;
+      const result = await apartmentCollection.insertOne(apartment);
+      res.json(result);
+    });
+    // Update Apartments
+    app.put("/apartment/update/:id", async (req, res) => {
+      const id = req.params.id;
+      const product = req.body;
+      const query = { _id: ObjectId(id) };
+      const update = { $set: { ...product } };
+      const result = await apartmentCollection.updateOne(query, update);
+      res.send(result);
+    });
+    //   DELETE AN APARTMENT FROM COLLECTION
+    app.delete("/apartment/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await apartmentCollection.deleteOne(query);
+      res.json(result);
+    }); 
     // GET AN APARTMENT BY ID
     app.get("/apartment/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: ObjectId(id) };
       const result = await apartmentCollection.findOne(query);
-      console.log(result);
       res.send(result);
     });
 
@@ -67,39 +89,82 @@ async function run() {
       const result = await apartmentCollection.find(query).toArray();
       res.json(result);
     });
-    // GET ALL ORDERS
+    /*---------------
+        ORDERS
+    ---------------*/
     app.get("/orders", async (req, res) => {
       const cursor = orderCollection.find({});
       const orders = await cursor.toArray();
       res.json(orders);
     });
-
+    // Payment Config
+    app.post("/orders", async (req, res) => {
+      const orderData = req.body;
+      const paymentInfo = await Stripe.charges.create(
+        {
+          source: orderData.token.id,
+          amount: orderData.grandTotal * 100,
+          currency: "USD",
+          receipt_email: orderData.token.email,
+        },
+        {
+          idempotencyKey: uuidv4(),
+        }
+      );
+      const newOrder = {
+        userEmail: orderData.userEmail,
+        paymentBy: "Stripe",
+        transactionId: paymentInfo.balance_transaction,
+        cartItem: orderData.cart,
+        totalPrice: orderData.grandTotal,
+        shippingAddress: orderData.shippingAdress,
+        shipping: orderData.shipping,
+        status: "pending",
+        date: orderData.date,
+      };
+      const result = await orderCollection.insertOne(newOrder);
+      res.json(result);
+    });
+    // GET SPECIFIC USERS ORDER BY EMAIL
+    app.get("/orders/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = {
+        userEmail: email,
+      };
+      const result = await orderCollection.find(query).toArray();
+      res.json(result);
+    });
+    // UPDATE METHOD
+    // UPDATE ORDER'S STATUS BY ID
+    app.put("/order/status/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateInfo = req.body;
+      const result = await orderCollection.updateOne(
+        { _id: ObjectId(id) },
+        { $set: { status: updateInfo.status } }
+      );
+      res.send(result);
+    });
+    // DELETE AN ORDER
+    app.delete("/order/delete/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: ObjectId(id) };
+      const result = await orderCollection.deleteOne(query);
+      res.json(result);
+    });
+    /*---------------
+        USERS
+    ---------------*/
     // CHECKING USER & ADMIN ROLE
     app.get("/users/:email", async (req, res) => {
       const email = req.params.email;
       const query = { email: email };
       const user = await userCollection.findOne(query);
-      console.log(user);
       let isAdmin = false;
       if (user && (user.role === "admin" || user.role === "superAdmin")) {
         isAdmin = true;
-      } 
+      }
       res.json({ admin: isAdmin });
-    });
-
-    // GET ALL REVIEWS
-    app.get("/reviews", async (req, res) => {
-      const cursor = reviewCollection.find({});
-      const reviews = await cursor.toArray();
-      res.send(reviews);
-    });
-    // POST METHOD
-    //   ADD AN APARTMENT APARTMENT COLLECTION
-    app.post("/apartments", async (req, res) => {
-      const apartment = req.body;
-      console.log(apartment);
-      const result = await apartmentCollection.insertOne(apartment);
-      res.json(result);
     });
     // GET ALL USER LIST
     app.get("/users", async (req, res) => {
@@ -112,8 +177,8 @@ async function run() {
       const user = req.body;
       const newUser = {
         ...user,
-        role:'user'
-      }
+        role: "user",
+      };
       const result = await userCollection.insertOne(newUser);
       res.json(result);
     });
@@ -143,7 +208,6 @@ async function run() {
       res.json(result);
     });
     app.put("/update/user/:email", async (req, res) => {
-      console.log(req);
       const email = req.params.email;
       const role = req.body;
       const result = await userCollection.updateOne(
@@ -152,88 +216,20 @@ async function run() {
       );
       res.send(result);
     });
-     app.put("/apartment/update/:id", async (req, res) => {
-       const id = req.params.id;
-       const product= req.body
-       const query = { _id: ObjectId(id) };
-       const update={$set:{...product}}
-       const result = await apartmentCollection.updateOne(query, update);
-       console.log(result);
-       res.send(result);
-     });
+    /*================
+          RIVIEWS
+    =================*/
+    app.get("/reviews", async (req, res) => {
+      const cursor = reviewCollection.find({});
+      const reviews = await cursor.toArray();
+      res.send(reviews);
+    });
     // ADD REVIEW
     app.post("/review", async (req, res) => {
       const review = req.body;
       const result = await reviewCollection.insertOne(review);
       res.json(result);
-    });
-    // Payment Config
-    app.post("/orders", async (req, res) => {
-      const orderData = req.body;
-      const paymentInfo = await Stripe.charges.create(
-        {
-          source: orderData.token.id,
-          amount: orderData.grandTotal * 100,
-          currency: "USD",
-          receipt_email: orderData.token.email,
-        },
-        {
-          idempotencyKey: uuidv4(),
-        }
-      );
-      const newOrder = {
-        userEmail: orderData.userEmail,
-        paymentBy: "Stripe",
-        transactionId: paymentInfo.balance_transaction,
-        cartItem: orderData.cart,
-        totalPrice: orderData.grandTotal,
-        shippingAddress: orderData.shippingAdress,
-        shipping: orderData.shipping,
-        status: "pending",
-        date: orderData.date,
-      };
-      const result = await orderCollection.insertOne(newOrder);
-      console.log(result);
-      res.json(result);
-    });
-    // GET SPECIFIC USERS ORDER BY EMAIL
-    app.get("/orders/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        userEmail: email,
-      };
-      const result = await orderCollection.find(query).toArray();
-      res.json(result);
-    });
-    // UPDATE METHOD
-    // UPDATE ORDER'S STATUS BY ID
-    app.put("/order/status/:id", async (req, res) => {
-      const id = req.params.id;
-      const updateInfo = req.body;
-      const result = await orderCollection.updateOne(
-        { _id: ObjectId(id) },
-        { $set: { status: updateInfo.status } }
-      );
-      res.send(result);
-    });
-
-    // DELETE METHOD
-    //   DELETE AN APARTMENT FROM COLLECTION
-    app.delete("/apartment/delete/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await apartmentCollection.deleteOne(query);
-      res.json(result);
-    });
-    // DELETE AN ORDER
-    app.delete("/order/delete/:id", async (req, res) => {
-      const id = req.params.id;
-      console.log(id);
-      const query = { _id: ObjectId(id) };
-      const result = await orderCollection.deleteOne(query);
-      console.log(result);
-      res.json(result);
-    });
+    });    
   } finally {
     // await client.close()
   }
