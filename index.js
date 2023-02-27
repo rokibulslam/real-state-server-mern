@@ -1,235 +1,26 @@
-const { v4: uuidv4 } = require("uuid");
 const express = require("express");
 const app = express();
 const port = process.env.PORT || 5000;
 const cors = require("cors");
 require("dotenv").config();
 const { MongoClient } = require("mongodb");
-const ObjectId = require("mongodb").ObjectId;
-const Stripe = require("stripe")(process.env.STRIPE);
+const { connect, getDb } = require("./src/utils/db");
+const router = require("./src/routes/v1/api");
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Connecting MongoDB database
-const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.2efaz.mongodb.net/myFirstDatabase?retryWrites=true&w=majority`;
-const client = new MongoClient(uri, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-});
-client.connect();
 async function run() {
   try {
-    const database = client.db("realState");
-    const apartmentCollection = database.collection("apartments");
-    const orderCollection = database.collection("orders");
-    const userCollection = database.collection("users");
-    const reviewCollection = database.collection("reviews");
-
-    /*---------------
-        APARTMENTS
-    ---------------*/
-    app.get("/apartments", async (req, res) => {
-      const cursor = apartmentCollection.find({});
-      const total = await cursor.toArray();
-      res.send(total);
+    await connect();
+    app.use(router);
+    app.get("/", (req, res) => {
+      res.send("Hello World!");
     });
-    // Create Apartments
-    app.post("/apartments", async (req, res) => {
-      const apartment = req.body;
-      const result = await apartmentCollection.insertOne(apartment);
-      res.json(result);
+    app.listen(port, () => {
+      console.log(`listening at port ${port}`);
     });
-    // Update Apartments
-    app.put("/apartment/update/:id", async (req, res) => {
-      const id = req.params.id;
-      const product = req.body;
-      const query = { _id: ObjectId(id) };
-      const update = { $set: { ...product } };
-      const result = await apartmentCollection.updateOne(query, update);
-      res.send(result);
-    });
-    //   DELETE AN APARTMENT FROM COLLECTION
-    app.delete("/apartment/delete/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await apartmentCollection.deleteOne(query);
-      res.json(result);
-    }); 
-    // GET AN APARTMENT BY ID
-    app.get("/apartment/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await apartmentCollection.findOne(query);
-      res.send(result);
-    });
-
-    // GET FEATURED APARTMENTS
-    app.get("/apartments/featured", async (req, res) => {
-      const query = {
-        Category: "Featured",
-      };
-      const result = await apartmentCollection.find(query).toArray();
-      res.json(result);
-    });
-    // GET RGULAR APARTMENTS
-    app.get("/apartments/regular", async (req, res) => {
-      const query = {
-        Category: "Regular",
-      };
-      const result = await apartmentCollection.find(query).toArray();
-      res.json(result);
-    });
-    // GET RGULAR APARTMENTS
-    app.get("/apartments/top", async (req, res) => {
-      const query = {
-        Category: "Top-Rated",
-      };
-      const result = await apartmentCollection.find(query).toArray();
-      res.json(result);
-    });
-    /*---------------
-        ORDERS
-    ---------------*/
-    app.get("/orders", async (req, res) => {
-      const cursor = orderCollection.find({});
-      const orders = await cursor.toArray();
-      res.json(orders);
-    });
-    // Payment Config
-    app.post("/orders", async (req, res) => {
-      const orderData = req.body;
-      const paymentInfo = await Stripe.charges.create(
-        {
-          source: orderData.token.id,
-          amount: orderData.grandTotal * 100,
-          currency: "USD",
-          receipt_email: orderData.token.email,
-        },
-        {
-          idempotencyKey: uuidv4(),
-        }
-      );
-      const newOrder = {
-        userEmail: orderData.userEmail,
-        paymentBy: "Stripe",
-        transactionId: paymentInfo.balance_transaction,
-        cartItem: orderData.cart,
-        totalPrice: orderData.grandTotal,
-        shippingAddress: orderData.shippingAdress,
-        shipping: orderData.shipping,
-        status: "pending",
-        date: orderData.date,
-      };
-      const result = await orderCollection.insertOne(newOrder);
-      res.json(result);
-    });
-    // GET SPECIFIC USERS ORDER BY EMAIL
-    app.get("/orders/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = {
-        userEmail: email,
-      };
-      const result = await orderCollection.find(query).toArray();
-      res.json(result);
-    });
-    // UPDATE METHOD
-    // UPDATE ORDER'S STATUS BY ID
-    app.put("/order/status/:id", async (req, res) => {
-      const id = req.params.id;
-      const updateInfo = req.body;
-      const result = await orderCollection.updateOne(
-        { _id: ObjectId(id) },
-        { $set: { status: updateInfo.status } }
-      );
-      res.send(result);
-    });
-    // DELETE AN ORDER
-    app.delete("/order/delete/:id", async (req, res) => {
-      const id = req.params.id;
-      const query = { _id: ObjectId(id) };
-      const result = await orderCollection.deleteOne(query);
-      res.json(result);
-    });
-    /*---------------
-        USERS
-    ---------------*/
-    // CHECKING USER & ADMIN ROLE
-    app.get("/users/:email", async (req, res) => {
-      const email = req.params.email;
-      const query = { email: email };
-      const user = await userCollection.findOne(query);
-      let isAdmin = false;
-      if (user && (user.role === "admin" || user.role === "superAdmin")) {
-        isAdmin = true;
-      }
-      res.json({ admin: isAdmin });
-    });
-    // GET ALL USER LIST
-    app.get("/users", async (req, res) => {
-      const cursor = await userCollection.find({});
-      const users = await cursor.toArray();
-      res.json(users);
-    });
-    //ADD AN USER
-    app.post("/users", async (req, res) => {
-      const user = req.body;
-      const newUser = {
-        ...user,
-        role: "user",
-      };
-      const result = await userCollection.insertOne(newUser);
-      res.json(result);
-    });
-    // CHECK AND ADD GOOGLE USER
-    app.put("/users", async (req, res) => {
-      const user = req.body;
-      const newUser = {
-        ...user,
-      };
-      const checkUser = { email: user.email };
-      //   if not found then add user using (upsert)
-      const updateUser = { $set: newUser };
-      const option = { upsert: true };
-      const result = await userCollection.updateOne(
-        checkUser,
-        updateUser,
-        option
-      );
-      res.json(result);
-    });
-    // CHANGE USER ROLE AND MAKE ADMIN
-    app.put("/users/admin", async (req, res) => {
-      const user = req.body;
-      const filter = { email: user.email };
-      const updateUserRole = { $set: { role: "admin" } };
-      const result = await userCollection.updateOne(filter, updateUserRole);
-      res.json(result);
-    });
-    app.put("/update/user/:email", async (req, res) => {
-      const email = req.params.email;
-      const role = req.body;
-      const result = await userCollection.updateOne(
-        { email: email },
-        { $set: { role: role.role } }
-      );
-      res.send(result);
-    });
-    /*================
-          RIVIEWS
-    =================*/
-    app.get("/reviews", async (req, res) => {
-      const cursor = reviewCollection.find({});
-      const reviews = await cursor.toArray();
-      res.send(reviews);
-    });
-    // ADD REVIEW
-    app.post("/review", async (req, res) => {
-      const review = req.body;
-      const result = await reviewCollection.insertOne(review);
-      res.json(result);
-    });    
   } finally {
     // await client.close()
   }
@@ -238,10 +29,3 @@ async function run() {
 run().catch(console.dir);
 
 // Checking server
-app.get("/", (req, res) => {
-  res.send("Hello World!");
-});
-
-app.listen(port, () => {
-  console.log(`listening at port ${port}`);
-});
